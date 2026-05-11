@@ -1,6 +1,6 @@
 # mfdl — MediaFire Downloader
 
-A fast command-line tool for downloading files and folders from MediaFire. Parallel chunked downloads, folder recursion, and batch mode — all in a single command.
+A fast command-line tool for downloading files and folders from MediaFire. Parallel chunked downloads, folder recursion, batch mode, and resume-safe partial files — all in a single command.
 
 ---
 
@@ -9,6 +9,8 @@ A fast command-line tool for downloading files and folders from MediaFire. Paral
 - **Parallel downloads** — splits each file into up to 20 concurrent HTTP range requests for maximum speed
 - **Folder download** — recursively downloads an entire MediaFire folder, recreating the directory structure locally
 - **Batch mode** — pass a text file of URLs to download them all in one go
+- **Skip existing** — resume an interrupted batch without re-downloading files already on disk
+- **Dry run** — preview what would be downloaded (filenames, sizes, totals) without writing anything
 - **Automatic retry** — each chunk is retried up to 3 times with exponential backoff on network errors
 - **Progress bar** — live display of filename, percentage, bytes, speed, and ETA
 - **Streaming fallback** — gracefully handles servers that don't support range requests
@@ -89,6 +91,33 @@ mfdl -f urls.txt -o ~/Downloads
 
 Lines starting with `#` and blank lines are ignored. Inline comments after ` #` are also stripped.
 
+### Skip files already downloaded
+
+Use `--skip-existing` to avoid re-downloading files that already exist at the destination. Useful when resuming an interrupted batch:
+
+```bash
+mfdl -f urls.txt -o ~/Downloads --skip-existing
+```
+
+### Preview before downloading
+
+Use `--dry-run` to see exactly what would be downloaded — filenames, file sizes, and totals — without writing anything to disk:
+
+```bash
+mfdl https://www.mediafire.com/folder/xyz789/GameAssets --dry-run
+```
+
+Example output:
+
+```
+Would download 3 file(s):
+  textures.zip (128.0 MB)
+  sounds.zip (45.3 MB)
+  manual.pdf (2.1 MB)
+
+Total: 3 files, 175.4 MB
+```
+
 ### Combine a file with an extra URL
 
 ```bash
@@ -104,6 +133,8 @@ mfdl -f urls.txt https://www.mediafire.com/file/extra/bonus.zip
 | `--output` | `-o` | `.` | Directory to save downloaded files |
 | `--connections` | `-n` | `8` | Parallel connections per file (1–20) |
 | `--input-file` | `-f` | — | Text file of URLs, one per line |
+| `--skip-existing` | `-s` | off | Skip files that already exist at the destination |
+| `--dry-run` | — | off | List what would be downloaded without downloading |
 | `--quiet` | `-q` | off | Suppress progress output (useful in scripts) |
 | `--version` | `-V` | — | Show version and exit |
 
