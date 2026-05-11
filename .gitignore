@@ -1,0 +1,10 @@
+.claude/
+_claude-project-template/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.uv/
+*.part
