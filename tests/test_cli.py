@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from mediafire_dl.cli import _fmt_size, app, read_url_file
+from mfdl.cli import _fmt_size, app, read_url_file
 
 runner = CliRunner()
 
@@ -65,19 +65,19 @@ def test_read_url_file_no_trailing_newline(tmp_path):
 def _make_mock_env(dl_url="https://download.mediafire.com/dl/x/file.zip", filename="file.zip"):
     """Patch get_download_url and download_file for CLI tests."""
     return (
-        patch("mediafire_dl.cli.get_download_url", return_value=(dl_url, filename)),
-        patch("mediafire_dl.cli.download_file", return_value=Path("/tmp/file.zip")),
-        patch("mediafire_dl.cli._make_client"),
+        patch("mfdl.cli.get_download_url", return_value=(dl_url, filename)),
+        patch("mfdl.cli.download_file", return_value=Path("/tmp/file.zip")),
+        patch("mfdl.cli._make_client"),
     )
 
 
 def test_cli_single_url_success():
     with (
         patch(
-            "mediafire_dl.cli.get_download_url", return_value=("https://dl.mf.com/f.zip", "f.zip")
+            "mfdl.cli.get_download_url", return_value=("https://dl.mf.com/f.zip", "f.zip")
         ),
-        patch("mediafire_dl.cli.download_file", return_value=Path("/tmp/f.zip")),
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.download_file", return_value=Path("/tmp/f.zip")),
+        patch("mfdl.cli._make_client") as mk,
     ):
         mk.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mk.return_value.__exit__ = MagicMock(return_value=False)
@@ -94,10 +94,10 @@ def test_cli_input_file_success(tmp_path):
     )
     with (
         patch(
-            "mediafire_dl.cli.get_download_url", return_value=("https://dl.mf.com/f.zip", "f.zip")
+            "mfdl.cli.get_download_url", return_value=("https://dl.mf.com/f.zip", "f.zip")
         ),
-        patch("mediafire_dl.cli.download_file", return_value=Path("/tmp/f.zip")),
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.download_file", return_value=Path("/tmp/f.zip")),
+        patch("mfdl.cli._make_client") as mk,
     ):
         mk.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mk.return_value.__exit__ = MagicMock(return_value=False)
@@ -117,9 +117,9 @@ def test_cli_input_file_mixed_with_arg(tmp_path):
         return ("https://dl.mf.com/f.zip", "f.zip")
 
     with (
-        patch("mediafire_dl.cli.get_download_url", side_effect=fake_get_dl),
-        patch("mediafire_dl.cli.download_file", return_value=Path("/tmp/f.zip")),
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.get_download_url", side_effect=fake_get_dl),
+        patch("mfdl.cli.download_file", return_value=Path("/tmp/f.zip")),
+        patch("mfdl.cli._make_client") as mk,
     ):
         mk.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mk.return_value.__exit__ = MagicMock(return_value=False)
@@ -134,7 +134,7 @@ def test_cli_input_file_mixed_with_arg(tmp_path):
 def test_cli_input_file_empty_exits_zero(tmp_path):
     url_file = tmp_path / "empty.txt"
     url_file.write_text("# nothing here\n")
-    with patch("mediafire_dl.cli._make_client"):
+    with patch("mfdl.cli._make_client"):
         result = runner.invoke(app, ["-f", str(url_file)])
     assert result.exit_code == 0
     assert "No URLs found" in result.output
@@ -163,9 +163,9 @@ def test_cli_batch_continues_after_failure(tmp_path):
         return ("https://dl.mf.com/good.zip", "good.zip")
 
     with (
-        patch("mediafire_dl.cli.get_download_url", side_effect=fake_get_dl),
-        patch("mediafire_dl.cli.download_file", return_value=Path("/tmp/good.zip")),
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.get_download_url", side_effect=fake_get_dl),
+        patch("mfdl.cli.download_file", return_value=Path("/tmp/good.zip")),
+        patch("mfdl.cli._make_client") as mk,
     ):
         mk.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mk.return_value.__exit__ = MagicMock(return_value=False)
@@ -187,11 +187,11 @@ def test_cli_skip_existing_skips_when_file_present(tmp_path):
 
     with (
         patch(
-            "mediafire_dl.cli.get_download_url",
+            "mfdl.cli.get_download_url",
             return_value=("https://dl.mf.com/file.zip", "file.zip"),
         ),
-        patch("mediafire_dl.cli.download_file") as mock_dl,
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.download_file") as mock_dl,
+        patch("mfdl.cli._make_client") as mk,
     ):
         mk.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mk.return_value.__exit__ = MagicMock(return_value=False)
@@ -214,11 +214,11 @@ def test_cli_skip_existing_downloads_when_absent(tmp_path):
     """DL-8: --skip-existing proceeds normally when dest does not exist."""
     with (
         patch(
-            "mediafire_dl.cli.get_download_url",
+            "mfdl.cli.get_download_url",
             return_value=("https://dl.mf.com/file.zip", "file.zip"),
         ),
-        patch("mediafire_dl.cli.download_file", return_value=tmp_path / "file.zip") as mock_dl,
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.download_file", return_value=tmp_path / "file.zip") as mock_dl,
+        patch("mfdl.cli._make_client") as mk,
     ):
         mk.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mk.return_value.__exit__ = MagicMock(return_value=False)
@@ -247,11 +247,11 @@ def test_cli_dry_run_does_not_download(tmp_path):
 
     with (
         patch(
-            "mediafire_dl.cli.get_download_url",
+            "mfdl.cli.get_download_url",
             return_value=("https://dl.mf.com/file.zip", "file.zip"),
         ),
-        patch("mediafire_dl.cli.download_file") as mock_dl,
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.download_file") as mock_dl,
+        patch("mfdl.cli._make_client") as mk,
     ):
         mock_client = MagicMock()
         mock_client.head.return_value = mock_head
@@ -275,11 +275,11 @@ def test_cli_dry_run_shows_size(tmp_path):
 
     with (
         patch(
-            "mediafire_dl.cli.get_download_url",
+            "mfdl.cli.get_download_url",
             return_value=("https://dl.mf.com/data.bin", "data.bin"),
         ),
-        patch("mediafire_dl.cli.download_file"),
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.download_file"),
+        patch("mfdl.cli._make_client") as mk,
     ):
         mock_client = MagicMock()
         mock_client.head.return_value = mock_head
@@ -296,7 +296,7 @@ def test_cli_dry_run_shows_size(tmp_path):
 
 def test_cli_dry_run_folder(tmp_path):
     """DL-9 (folder mode): --dry-run lists all files and total size without downloading."""
-    from mediafire_dl.parser import RemoteFile
+    from mfdl.parser import RemoteFile
 
     mock_files = [
         RemoteFile(url="https://mf.com/file/k1/a.txt", filename="a.txt", size=1024),
@@ -304,10 +304,10 @@ def test_cli_dry_run_folder(tmp_path):
     ]
 
     with (
-        patch("mediafire_dl.cli.extract_folder_key", return_value="folderkey"),
-        patch("mediafire_dl.cli.list_folder", return_value=mock_files),
-        patch("mediafire_dl.cli.download_file") as mock_dl,
-        patch("mediafire_dl.cli._make_client") as mk,
+        patch("mfdl.cli.extract_folder_key", return_value="folderkey"),
+        patch("mfdl.cli.list_folder", return_value=mock_files),
+        patch("mfdl.cli.download_file") as mock_dl,
+        patch("mfdl.cli._make_client") as mk,
     ):
         mk.return_value.__enter__ = MagicMock(return_value=MagicMock())
         mk.return_value.__exit__ = MagicMock(return_value=False)

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-from mediafire_dl.parser import (
+from mfdl.parser import (
     extract_file_key,
     extract_folder_key,
     get_download_url,

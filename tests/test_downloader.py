@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from mediafire_dl.downloader import _fetch_range, download_file
+from mfdl.downloader import _fetch_range, download_file
 
 
 def _head_response(content_length: int, accepts_ranges: bool = True) -> MagicMock:
@@ -61,7 +61,7 @@ def test_download_file_streaming(tmp_path):
     data = b"streaming data content"
     mock_client = _client_mock(_head_response(0, accepts_ranges=False), _stream_mock(data))
 
-    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
+    with patch("mfdl.downloader.httpx.Client", return_value=mock_client):
         path = download_file(
             "https://example.com/file.bin",
             tmp_path,
@@ -81,7 +81,7 @@ def test_download_file_creates_output_dir(tmp_path):
     dest = tmp_path / "nested" / "dir"
     mock_client = _client_mock(_head_response(0, accepts_ranges=False), _stream_mock(b"content"))
 
-    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
+    with patch("mfdl.downloader.httpx.Client", return_value=mock_client):
         path = download_file("https://example.com/a.txt", dest, "a.txt", quiet=True)
 
     assert dest.exists()
@@ -95,7 +95,7 @@ def test_download_file_skip_existing(tmp_path):
 
     mock_client = _client_mock(_head_response(0))
 
-    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
+    with patch("mfdl.downloader.httpx.Client", return_value=mock_client):
         path = download_file(
             "https://example.com/file.bin",
             tmp_path,
@@ -114,8 +114,8 @@ def test_download_file_parallel_path_chosen(tmp_path):
     head_resp = _head_response(10_000, accepts_ranges=True)
     mock_client = _client_mock(head_resp)
 
-    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
-        with patch("mediafire_dl.downloader._parallel") as mock_parallel:
+    with patch("mfdl.downloader.httpx.Client", return_value=mock_client):
+        with patch("mfdl.downloader._parallel") as mock_parallel:
             download_file(
                 "https://example.com/file.bin",
                 tmp_path,
@@ -132,7 +132,7 @@ def test_download_file_streams_when_single_connection(tmp_path):
     data = b"single connection content"
     mock_client = _client_mock(_head_response(len(data), accepts_ranges=True), _stream_mock(data))
 
-    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
+    with patch("mfdl.downloader.httpx.Client", return_value=mock_client):
         path = download_file(
             "https://example.com/file.bin",
             tmp_path,
@@ -154,7 +154,7 @@ def test_hard_r1_part_file_cleaned_up_on_failure(tmp_path):
 
     mock_client = _client_mock(_head_response(0, accepts_ranges=False), stream_resp)
 
-    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
+    with patch("mfdl.downloader.httpx.Client", return_value=mock_client):
         with pytest.raises(Exception, match="connection dropped"):
             download_file("https://example.com/file.bin", tmp_path, "file.bin", quiet=True)
 
@@ -179,7 +179,7 @@ def test_hard_r1_part_file_survives_keyboard_interrupt(tmp_path):
 
     mock_client = _client_mock(_head_response(0, accepts_ranges=False), stream_resp)
 
-    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
+    with patch("mfdl.downloader.httpx.Client", return_value=mock_client):
         with pytest.raises(KeyboardInterrupt):
             download_file("https://example.com/file.bin", tmp_path, "file.bin", quiet=True)
 

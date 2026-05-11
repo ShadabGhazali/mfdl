@@ -158,9 +158,9 @@ mfdl -f urls.txt -o ~/Downloads && echo "All done!"
 ## Uninstall
 
 ```bash
-uv tool uninstall mediafire-dl
+uv tool uninstall mfdl
 # or
-pip uninstall mediafire-dl
+pip uninstall mfdl
 ```
 
 ---

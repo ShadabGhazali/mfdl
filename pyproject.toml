@@ -1,5 +1,5 @@
 [project]
-name = "mediafire-dl"
+name = "mfdl"
 version = "0.1.0"
 description = "Fast MediaFire file and folder downloader with parallel chunked downloads"
 license = { text = "MIT" }
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mfdl = "mediafire_dl.cli:main_cli"
+mfdl = "mfdl.cli:main_cli"
 
 [build-system]
 requires = ["hatchling"]
@@ -29,7 +29,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["mediafire_dl"]
+packages = ["mfdl"]
 
 [tool.ruff]
 line-length = 100
