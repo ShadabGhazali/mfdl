@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from mediafire_dl.cli import app, read_url_file
+from mediafire_dl.cli import _fmt_size, app, read_url_file
 
 runner = CliRunner()
 
@@ -292,3 +292,66 @@ def test_cli_dry_run_shows_size(tmp_path):
 
     assert result.exit_code == 0
     assert "2.0 MB" in result.output
+
+
+def test_cli_dry_run_folder(tmp_path):
+    """DL-9 (folder mode): --dry-run lists all files and total size without downloading."""
+    from mediafire_dl.parser import RemoteFile
+
+    mock_files = [
+        RemoteFile(url="https://mf.com/file/k1/a.txt", filename="a.txt", size=1024),
+        RemoteFile(url="https://mf.com/file/k2/b.zip", filename="b.zip", size=2 * 1024 * 1024),
+    ]
+
+    with (
+        patch("mediafire_dl.cli.extract_folder_key", return_value="folderkey"),
+        patch("mediafire_dl.cli.list_folder", return_value=mock_files),
+        patch("mediafire_dl.cli.download_file") as mock_dl,
+        patch("mediafire_dl.cli._make_client") as mk,
+    ):
+        mk.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mk.return_value.__exit__ = MagicMock(return_value=False)
+        result = runner.invoke(
+            app,
+            [
+                "--dry-run",
+                "-o",
+                str(tmp_path),
+                "https://www.mediafire.com/folder/folderkey/MyFolder",
+            ],
+        )
+
+    assert result.exit_code == 0
+    mock_dl.assert_not_called()
+    assert "2 file(s)" in result.output
+    assert "a.txt" in result.output
+    assert "b.zip" in result.output
+
+
+# --- _fmt_size ---
+
+
+def test_fmt_size_bytes():
+    assert _fmt_size(500) == "500.0 B"
+
+
+def test_fmt_size_kilobytes():
+    assert _fmt_size(1024) == "1.0 KB"
+
+
+def test_fmt_size_megabytes():
+    assert _fmt_size(2 * 1024 * 1024) == "2.0 MB"
+
+
+def test_fmt_size_gigabytes():
+    assert _fmt_size(1024**3) == "1.0 GB"
+
+
+# --- --version ---
+
+
+def test_cli_version():
+    """--version prints the version string and exits 0."""
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "mfdl" in result.output

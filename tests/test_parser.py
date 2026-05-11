@@ -102,6 +102,39 @@ def test_get_download_url_no_link_raises():
         get_download_url("https://www.mediafire.com/file/xyz/file.zip", client)
 
 
+def test_get_download_url_key_no_longer_exists():
+    """DL-2: raises ValueError when MediaFire reports key no longer exists."""
+    html = "<html><body>Sorry, this key no longer exists.</body></html>"
+    client = _mock_client(html)
+    with pytest.raises(ValueError, match="no longer exists"):
+        get_download_url("https://www.mediafire.com/file/gone/file.zip", client)
+
+
+def test_get_download_url_filename_from_element():
+    """DL-1.1: filename extracted from .filename element takes priority over URL."""
+    html = """
+    <html><body>
+      <a id="downloadButton" href="https://download.mediafire.com/file/abc/photo.jpg">Download</a>
+      <span class="filename">actual_photo.jpg</span>
+    </body></html>
+    """
+    client = _mock_client(html)
+    _, filename = get_download_url("https://www.mediafire.com/file/abc/photo.jpg", client)
+    assert filename == "actual_photo.jpg"
+
+
+def test_get_download_url_filename_fallback_strips_file_segment():
+    """DL-1.1: filename falls back to URL path and ignores trailing /file segment."""
+    html = """
+    <html><body>
+      <a id="downloadButton" href="https://download.mediafire.com/file/abc/report.pdf">Download</a>
+    </body></html>
+    """
+    client = _mock_client(html, url="https://www.mediafire.com/file/abc123/report.pdf/file")
+    _, filename = get_download_url("https://www.mediafire.com/file/abc123/report.pdf/file", client)
+    assert filename == "report.pdf"
+
+
 # --- list_folder ---
 
 
@@ -147,3 +180,101 @@ def test_list_folder_empty():
 
     files = list_folder("folderkey123", client)
     assert files == []
+
+
+def test_list_folder_pagination():
+    """FOLD-1.1: all chunks are fetched when more_chunks is 'yes'."""
+
+    def _resp(data: dict) -> MagicMock:
+        r = MagicMock(spec=httpx.Response)
+        r.raise_for_status = MagicMock()
+        r.json.return_value = data
+        return r
+
+    # chunk 1 of files — more to come
+    page1 = {
+        "response": {
+            "folder_content": {
+                "files": [{"quickkey": "k1", "filename": "a.txt", "size": "100"}],
+                "folders": [],
+                "more_chunks": "yes",
+            }
+        }
+    }
+    # chunk 2 of files — last page
+    page2 = {
+        "response": {
+            "folder_content": {
+                "files": [{"quickkey": "k2", "filename": "b.txt", "size": "200"}],
+                "folders": [],
+                "more_chunks": "no",
+            }
+        }
+    }
+    # subfolders page (empty)
+    page_sub = {"response": {"folder_content": {"files": [], "folders": [], "more_chunks": "no"}}}
+
+    client = MagicMock(spec=httpx.Client)
+    client.get.side_effect = [_resp(page1), _resp(page2), _resp(page_sub)]
+
+    files = list_folder("folderkey", client)
+    assert len(files) == 2
+    assert files[0].filename == "a.txt"
+    assert files[1].filename == "b.txt"
+
+
+def test_list_folder_subfolder():
+    """FOLD-2: files in subfolders are collected with the correct subpath."""
+
+    def _resp(data: dict) -> MagicMock:
+        r = MagicMock(spec=httpx.Response)
+        r.raise_for_status = MagicMock()
+        r.json.return_value = data
+        return r
+
+    root_files = {"response": {"folder_content": {"files": [], "folders": [], "more_chunks": "no"}}}
+    root_sub = {
+        "response": {
+            "folder_content": {
+                "files": [],
+                "folders": [{"folderkey": "sub_key", "name": "Assets"}],
+                "more_chunks": "no",
+            }
+        }
+    }
+    sub_files = {
+        "response": {
+            "folder_content": {
+                "files": [{"quickkey": "f1", "filename": "texture.png", "size": "512"}],
+                "folders": [],
+                "more_chunks": "no",
+            }
+        }
+    }
+    sub_sub = {"response": {"folder_content": {"files": [], "folders": [], "more_chunks": "no"}}}
+
+    client = MagicMock(spec=httpx.Client)
+    client.get.side_effect = [_resp(root_files), _resp(root_sub), _resp(sub_files), _resp(sub_sub)]
+
+    files = list_folder("root_key", client)
+    assert len(files) == 1
+    assert files[0].filename == "texture.png"
+    assert files[0].subpath == "Assets"
+
+
+def test_list_folder_on_progress_callback():
+    """on_progress is called once per file with the running total."""
+    resp = MagicMock(spec=httpx.Response)
+    resp.raise_for_status = MagicMock()
+    resp.json.return_value = _folder_api_response(
+        [
+            {"quickkey": "k1", "filename": "a.txt", "size": "100"},
+            {"quickkey": "k2", "filename": "b.zip", "size": "200"},
+        ]
+    )
+    client = MagicMock(spec=httpx.Client)
+    client.get.return_value = resp
+
+    calls: list[int] = []
+    list_folder("folderkey", client, on_progress=calls.append)
+    assert calls == [1, 2]

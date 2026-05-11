@@ -109,6 +109,41 @@ def test_download_file_skip_existing(tmp_path):
     mock_client.head.assert_not_called()
 
 
+def test_download_file_parallel_path_chosen(tmp_path):
+    """DL-3: parallel path is selected when server supports Range and content-length > 0."""
+    head_resp = _head_response(10_000, accepts_ranges=True)
+    mock_client = _client_mock(head_resp)
+
+    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
+        with patch("mediafire_dl.downloader._parallel") as mock_parallel:
+            download_file(
+                "https://example.com/file.bin",
+                tmp_path,
+                "file.bin",
+                num_connections=4,
+                quiet=True,
+            )
+
+    mock_parallel.assert_called_once()
+
+
+def test_download_file_streams_when_single_connection(tmp_path):
+    """DL-4: num_connections=1 forces streaming even when Range is supported."""
+    data = b"single connection content"
+    mock_client = _client_mock(_head_response(len(data), accepts_ranges=True), _stream_mock(data))
+
+    with patch("mediafire_dl.downloader.httpx.Client", return_value=mock_client):
+        path = download_file(
+            "https://example.com/file.bin",
+            tmp_path,
+            "file.bin",
+            num_connections=1,
+            quiet=True,
+        )
+
+    assert path.read_bytes() == data
+
+
 def test_hard_r1_part_file_cleaned_up_on_failure(tmp_path):
     """HARD-R1: .part file deleted when download fails unrecoverably."""
     stream_resp = MagicMock()
